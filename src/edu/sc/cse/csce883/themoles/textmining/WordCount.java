@@ -11,15 +11,17 @@ import java.io.*;
 import edu.sc.cse.csce883.themoles.utils.Constructor;
 
 public class WordCount {
- public static void main(String[] args) throws FileNotFoundException {
+ public static void main(String[] args) throws IOException {
      // open the file
      Scanner console = new Scanner(System.in);
 //     System.out.print("What is the name of the text file? ");
+     ArrayList<String> listOfKeyWords = new ArrayList<String>();
      String fileName = "./dataset/training/train.csv";
      String dictName = "./dataset/dictionary/dictionary.txt";
      String stoplist = "./dataset/dictionary/stopwords_en.txt";
      String stasticFileName = "./dataset/dictionary/word_stastics.txt";
-     
+     String originalDataset = "/home/ibrahimwelsayed/Downloads/883project/Train_rev1.csv";
+
      Constructor worker = new Constructor();
      
      System.out.println("Working ...");
@@ -36,14 +38,6 @@ public class WordCount {
          }
      }
 
-     // get cutoff and report frequencies
-//     wordCounts = SortByValue(wordCounts);
-     
-     // comment by Ying Meng
-     // sort by values
-//     System.out.println("\tSorting ...");
-//     wordCounts = sortByValues(wordCounts);
-//     System.out.println("\tDone sorting!");
      
      System.out.println("Total words = " + wordCounts.size());
      
@@ -58,13 +52,20 @@ public class WordCount {
      TreeMap<String, Integer> wordStastics = new TreeMap<String, Integer>();
      for (String word : wordCounts.keySet()) {
          int count = wordCounts.get(word);
-         if (count >= min)
+         if (count >= min){
 //             System.out.println(count + "\t" + word);
+        	 listOfKeyWords.add(word);
         	 wordStastics.put(word, count);
+         }
+         
      }
      
      // write wordStastics into a text file
-     worker.parse2Txt(wordStastics, stasticFileName);
+     worker.parse2Txt(wordStastics, stasticFileName); 
+     System.out.println(listOfKeyWords.size());
+     System.out.println(listOfKeyWords.get(listOfKeyWords.size()-1));
+     worker.removeUnwantedRecords(originalDataset, listOfKeyWords);
+ 
  }
  
  // comment by Ying Meng

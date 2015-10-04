@@ -1,8 +1,16 @@
 package edu.sc.cse.csce883.themoles.utils;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.Map.Entry;
 /**
@@ -131,5 +139,28 @@ public class Constructor {
 		// write the statics into a .txt
 		worker.parse2Txt(testList, wordStat);
 		System.out.println("Done!!!");
+	}
+
+	public void removeUnwantedRecords(String originalDataset,ArrayList<String> listOfKeyWords) throws IOException {
+		String line;
+		try (
+		    InputStream fis = new FileInputStream(originalDataset);
+		    InputStreamReader isr = new InputStreamReader(fis, Charset.forName("UTF-8"));
+			PrintWriter writer = new PrintWriter("./dataset/dictionary/output.csv", "UTF-8");
+		    BufferedReader br = new BufferedReader(isr);
+		) {
+		    while ((line = br.readLine()) != null) {
+		    	for (String s: listOfKeyWords ){
+					if (line.contains(s)){
+						writer.println(line);
+						//System.out.println(s);
+						break;
+					}
+				}
+
+		    }
+		    writer.close();
+
+		}
 	}
 }
