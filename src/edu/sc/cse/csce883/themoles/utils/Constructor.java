@@ -1,5 +1,6 @@
 package edu.sc.cse.csce883.themoles.utils;
 
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -103,44 +104,7 @@ public class Constructor {
 		System.out.println("done writing");
 	}
 	
-	// for test
-	void printTreeMap(TreeMap<String, Integer> toPrint) {
-		for (Entry<String, Integer> entry : 
-					toPrint.entrySet()) {
-		System.out.println(entry.getKey() + "\t" + entry.getValue());
-		}
-	}
-	
-	public static void main(String[] args) {		
-		String dictionary = "./dataset/dictionary/dictionary.txt";
-		String stoplist = "./dataset/dictionary/stopwords_en.txt";
-		String wordStat = "./dataset/dictionary/stat_test.txt";
-		
-		Constructor worker = new Constructor();
-		String[] words = {"my", "SOFTWARE", "engineer", "yours", "CSCE", "*", "go", "Computer", "compromit"};
-		TreeMap<String, Integer> testList = new TreeMap<String, Integer>();
-		
-		for (String word : words) {
-			testList.put(word.toLowerCase(), 1);
-		}
-		
-		
-		// print testlist
-//		worker.printTreeMap(testList);
-		
-		// clean the list
-		testList = worker.clean(testList, dictionary);
-		// cleaned list
-//		worker.printTreeMap(testList);
-		
-		// filter out stop words
-		testList = worker.filter(testList, stoplist);
-		
-		// write the statics into a .txt
-		worker.parse2Txt(testList, wordStat);
-		System.out.println("Done!!!");
-	}
-
+	// added by Ibraheem
 	public void removeUnwantedRecords(String originalDataset,ArrayList<String> listOfKeyWords) throws IOException {
 		String line;
 		try (
@@ -162,5 +126,43 @@ public class Constructor {
 		    writer.close();
 
 		}
+	}
+	
+	// for test
+	void printTreeMap(TreeMap<String, Integer> toPrint) {
+		for (Entry<String, Integer> entry : 
+					toPrint.entrySet()) {
+		System.out.println(entry.getKey() + "\t" + entry.getValue());
+		}
+	}
+	
+	public static void main(String[] args) {
+		// an example of usage
+		String dictionary = "./dataset/dictionary/dictionary.txt";
+		String stoplist = "./dataset/dictionary/stopwords_en.txt";
+		String wordStat = "./dataset/dictionary/stat_test.txt";
+		
+		Constructor worker = new Constructor();
+		String[] words = {"my", "SOFTWARE", "engineer", "yours", "CSCE", "*", "go", "Computer", "compromit"};
+		TreeMap<String, Integer> testList = new TreeMap<String, Integer>();
+		
+		for (String word : words) {
+			testList.put(word.toLowerCase(), 1);
+		}
+		
+		// print testlist
+//		worker.printTreeMap(testList);
+		
+		// clean the list
+		testList = worker.clean(testList, dictionary);
+		// cleaned list
+//		worker.printTreeMap(testList);
+		
+		// filter out stop words
+		testList = worker.filter(testList, stoplist);
+		
+		// write the statics into a .txt
+		worker.parse2Txt(testList, wordStat);
+		System.out.println("Done!!!");
 	}
 }
