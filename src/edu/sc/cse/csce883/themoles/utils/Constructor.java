@@ -5,7 +5,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,6 +13,7 @@ import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.util.*;
 import java.util.Map.Entry;
+
 /**
  * 
  * @author meng
@@ -21,6 +21,8 @@ import java.util.Map.Entry;
  * 			1. building a set of words for given dictionary (.txt)
  * 			2. filtering stop words from given collection (TreeMap<String, Integer>)
  * 			3. writing a list of word statistics (TreeMap<String, Integer>) into a file (.txt)
+ * 			4. splitting a big data set into train set and validation set, given a ratio
+ * 			5. reorganizing the data set: splitting by keywords
  */
 public class Constructor {
 	
@@ -86,7 +88,7 @@ public class Constructor {
 	// output keys and corresponding values into a txt file
 	public void parse2Txt(TreeMap<String, Integer> toParse, String file) {
 		try {
-			System.out.println("start writing " + toParse.size());
+			System.out.println("\tstart writing keywords" + toParse.size());
 			FileWriter stream = new FileWriter(file);
 			BufferedWriter out = new BufferedWriter(stream);
 			
@@ -101,68 +103,287 @@ public class Constructor {
 			System.out.println(e.getMessage());
 			System.exit(0);
 		}
-		System.out.println("done writing");
+		System.out.println("\tDone writing");
 	}
 	
-	// added by Ibraheem
-	public void removeUnwantedRecords(String originalDataset,ArrayList<String> listOfKeyWords) throws IOException {
+	/**
+	 * To randomly pick (total_amount * rate) many records
+	 * from original data set for validation.
+	 * @param allIDs - list of ids in the big data set
+	 * @param rate - the percent of records in validation set
+	 * @return the list of validation ids which were picked randomly
+	 */
+	ArrayList<String> getRandValidIDList(String allIDs, double rate) {
+		ArrayList<String> vIds = new ArrayList<String> ();
+		HashMap<Integer, String> allIds = new HashMap<Integer, String> ();
+		Random rand = new Random();
 		String line;
-		try (
-		    InputStream fis = new FileInputStream(originalDataset);
+		int counter = 0;
+		int amount = 0;
+		int pickedIndex = 0;
+		String pickedId;
+		
+		try {
+			InputStream fis = new FileInputStream(allIDs);
 		    InputStreamReader isr = new InputStreamReader(fis, Charset.forName("UTF-8"));
-			PrintWriter writer = new PrintWriter("./dataset/dictionary/output.csv", "UTF-8");
-		    BufferedReader br = new BufferedReader(isr);
-		) {
-		    while ((line = br.readLine()) != null) {
-		    	for (String s: listOfKeyWords ){
-					if (line.contains(s)){
-						writer.println(line);
-						//System.out.println(s);
-						break;
-					}
-				}
-
+		    BufferedReader reader = new BufferedReader(isr);
+		    
+		    // get all ids and assign index for them
+		    while ((line = reader.readLine()) != null) {
+		    	counter++;
+		    	allIds.put(counter, line);
 		    }
-		    writer.close();
-
+		    reader.close();
+		    
+		    // amount of records in validation set
+		    amount = (int) (counter * rate);
+			for (int i = 0; i < amount; i++) {
+				pickedIndex = rand.nextInt(counter);
+				pickedId = allIds.get(pickedIndex);
+				if (! vIds.contains(pickedId)) {
+					vIds.add(pickedId);
+				} else {
+					i--;
+				}
+			}
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+			System.exit(0);
+		}
+		return vIds;
+	}
+	
+	/**
+	 * To randomly split the given big data set into a train set and a validation set
+	 * @param originalDataset - the big data set to split
+	 * @param idsFile - the file stores only the all the ids in original big data set
+	 * @param totalAmount - total records in original big data set
+	 * @param validRate - the percent of records in train set, it must be greater than 0 and less than 1.
+	 */
+	public void splitDataset(String originalDataset, 
+							String trainSet, String validationSet,
+							String idsFile, double validRate) {
+		try {
+			InputStream fis = new FileInputStream(originalDataset);
+		    InputStreamReader isr = new InputStreamReader(fis, Charset.forName("UTF-8"));
+		    BufferedReader reader = new BufferedReader(isr);
+		    
+			PrintWriter trainWriter = new PrintWriter(trainSet, "UTF-8");
+			PrintWriter validWriter = new PrintWriter(validationSet, "UTF-8");
+		    
+			File train = new File(trainSet);
+			File valid = new File(validationSet);
+			
+			// Since data set is split randomly, confirm with user before overwrite existing sets.
+			if (train.isFile() && valid.isFile()) {
+				System.out.println(trainSet + " and " + validationSet + " already exist!\n" 
+									+ "Do you want to overwirte them?\n"
+									+ "Type \"Yes\" to skip splitting data set!");
+				Scanner console = new Scanner(System.in);
+				if (console.nextLine().equalsIgnoreCase("yes")) {
+					System.out.println("Skip splitting data set. Use existing train set and validation set.");
+					return;
+				}
+			}
+			
+		    ArrayList<String> validationIDList = getRandValidIDList(idsFile, validRate);
+		    String line = reader.readLine();
+		    boolean isFeature = true;
+		    String[] items;
+		    
+		    System.out.println("\tSplitting data set ...");
+		    // split data set into train set and validation set
+		    while (line != null) {
+		    	if (isFeature) {
+		    		validWriter.println(line);
+		    		trainWriter.println(line);
+		    		isFeature = false;
+		    	}
+		    	
+		    	items = line.split(",");
+		    	if (validationIDList.contains(items[0])) {
+		    		validWriter.println(line);
+		    	} else {
+		    		trainWriter.println(line);
+		    	}
+		    	line = reader.readLine();
+		    }
+		    validWriter.close();
+		    trainWriter.close();
+		    reader.close();
+		    
+		    System.out.println("\tData set has been split!");
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+			System.exit(0);
 		}
 	}
 	
-	// for test
-	void printTreeMap(TreeMap<String, Integer> toPrint) {
-		for (Entry<String, Integer> entry : 
-					toPrint.entrySet()) {
-		System.out.println(entry.getKey() + "\t" + entry.getValue());
+	/**
+	 * Reorganize data set by keywords
+	 * @param originalDataset
+	 * @param listOfKeyWords
+	 */
+	public void organizeDatasetByKey(String originalDataset, 
+									ArrayList<String> listOfKeyWords) {
+		
+		String path = originalDataset.substring(0, originalDataset.lastIndexOf('/') + 1);
+		String postfix = ".csv";
+		String tmpFileName = "output.csv";
+		String overviewFile = path + "overview" + postfix;
+		int counter = 0;
+		
+		tmpFileName = path + tmpFileName;
+		String fileName = "";
+		
+		try {
+			System.out.println("\tReorganizing " + originalDataset);
+			PrintWriter overviewWriter = new PrintWriter(overviewFile, "UTF-8");
+			
+			overviewWriter.println("keyword" + "," + "amount");
+			
+		    for (String key: listOfKeyWords) {
+		    	counter = 0;
+		    	InputStream fis = new FileInputStream(originalDataset);
+			    InputStreamReader isr = new InputStreamReader(fis, Charset.forName("UTF-8"));
+				PrintWriter writer = new PrintWriter(tmpFileName, "UTF-8");
+				
+			    BufferedReader reader = new BufferedReader(isr);
+			    
+		    	fileName = path + key + postfix;
+		    	String line = reader.readLine();
+		    	System.out.println("\t\tWriting data set of " + key);
+		    	boolean isFeature = true;
+		    	
+		    	while (line != null) {
+		    		if (isFeature) {
+		    			writer.println(line);
+		    			isFeature = false;
+		    		}
+		    		if (line.contains(key)) {
+		    			
+		    			writer.println(line);
+		    			counter++;
+		    		}
+		    		line = reader.readLine();
+		    	}
+		    	reader.close();
+		    	writer.close();
+		    	
+		    	line = key + "," + counter;
+		    	overviewWriter.println(line);
+		    	
+		    	// rename the file with keyword
+		    	File oldFile = new File(tmpFileName);
+		    	File newFile = new File(fileName);
+		    	oldFile.renameTo(newFile);
+		    	
+		    	// remove full description from data set
+		    	removeColsFromCsv(fileName, 2);
+		    	
+		    	System.out.println("\t\tDataset (" + key + ") has been created.");
+
+		    }
+		    overviewWriter.close();
+		    
+		    System.out.println("\t" + originalDataset + " has been reorganized.");
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+			System.exit(0);
+		}
+	}
+	
+	/**
+	 * Save IDs of entire data set in a file for later calculation
+	 * @param origininalDataset
+	 */
+	public void splitIDsFromDataset(String originalDataset, String idFile) {
+		
+		try {
+			InputStream fis = new FileInputStream(originalDataset);
+			InputStreamReader isr =new InputStreamReader(fis, Charset.forName("UTF-8"));
+			BufferedReader reader = new BufferedReader(isr);
+			PrintWriter writer = new PrintWriter(idFile, "UTF-8");
+			String regTex = ",(?=([^\"]*\"[^\"]*\")*[^\"]*$)";
+			
+			File fileOfIds = new File(idFile);
+			// Since data set is split randomly, confirm with user before overwrite existing sets.
+			if (fileOfIds.isFile()) {
+				System.out.println(fileOfIds + " already exists!\n" 
+									+ "Do you want to overwirte it?\n"
+									+ "Type \"Yes\" to skip splitting data set!");
+				Scanner console = new Scanner(System.in);
+				if (console.nextLine().equalsIgnoreCase("yes")) {
+					System.out.println("Skip splitting data set. Use existing train set and validation set.");
+					return;
+				}
+			}
+			
+			String line = reader.readLine();
+			while (line != null) {
+				String[] items = line.split(regTex, -1);
+				writer.println(items[0]);
+				line = reader.readLine();
+			}
+			writer.close();
+			reader.close();
+			
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+			System.exit(0);
+		}
+	}
+	
+	/**
+	 * To remove specific column from given csv file
+	 * @param csvFile
+	 * @param colIndex
+	 */
+	public void removeColsFromCsv(String csvFile, int colIndex) {
+		String path = csvFile.substring(0, csvFile.lastIndexOf('/') + 1);
+		String tmp = path + "removed.csv";
+		
+		try {
+			InputStream fis = new FileInputStream(csvFile);
+			InputStreamReader isr =new InputStreamReader(fis, Charset.forName("UTF-8"));
+			BufferedReader reader = new BufferedReader(isr);
+			
+			PrintWriter writer = new PrintWriter(tmp, "UTF-8");
+			String regTex = ",(?=([^\"]*\"[^\"]*\")*[^\"]*$)";
+			String line = reader.readLine();
+			String[] items;
+			System.out.println("\t\t\t Remove full description from data set ...");
+			while (line != null) {
+				items = line.split(regTex, -1);
+				line = "";
+				for (int i = 0; i < items.length; i++) {
+					if (i != colIndex) {
+						line += items[i] + ",";
+					}
+				}
+				writer.println(line);
+				line = reader.readLine();
+			}
+			writer.close();
+			reader.close();
+			
+			File original = new File(csvFile);
+			File fileRmCol = new File(tmp);
+			
+//			original.deleteOnExit();
+			fileRmCol.renameTo(original);
+			
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+			System.exit(0);
 		}
 	}
 	
 	public static void main(String[] args) {
-		// an example of usage
-		String dictionary = "./dataset/dictionary/dictionary.txt";
-		String stoplist = "./dataset/dictionary/stopwords_en.txt";
-		String wordStat = "./dataset/dictionary/stat_test.txt";
-		
 		Constructor worker = new Constructor();
-		String[] words = {"my", "SOFTWARE", "engineer", "yours", "CSCE", "*", "go", "Computer", "compromit"};
-		TreeMap<String, Integer> testList = new TreeMap<String, Integer>();
+		String csv = "./dataset/training/valid/validstore.csv";
+		int colIndex = 2;
 		
-		for (String word : words) {
-			testList.put(word.toLowerCase(), 1);
-		}
-		
-		// print testlist
-//		worker.printTreeMap(testList);
-		
-		// clean the list
-		testList = worker.clean(testList, dictionary);
-		// cleaned list
-//		worker.printTreeMap(testList);
-		
-		// filter out stop words
-		testList = worker.filter(testList, stoplist);
-		
-		// write the statics into a .txt
-		worker.parse2Txt(testList, wordStat);
-		System.out.println("Done!!!");
+		worker.removeColsFromCsv(csv, colIndex);
 	}
 }

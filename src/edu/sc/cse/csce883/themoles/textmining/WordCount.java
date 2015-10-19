@@ -10,17 +10,27 @@ import java.io.*;
 
 import edu.sc.cse.csce883.themoles.utils.Constructor;
 
+/**
+ * ..
+ * @author Ibrahim
+ *
+ */
 public class WordCount {
  public static void main(String[] args) throws IOException {
      // open the file
     Scanner console = new Scanner(System.in);
 //     System.out.print("What is the name of the text file? ");
     ArrayList<String> listOfKeyWords = new ArrayList<String>();
-    String fileName = "./dataset/dictionary/Train_rev1.csv";
+    String fileName = "./dataset/training/train_job_description.csv";
     String dictName = "./dataset/dictionary/webster_simple.dict";
     String stoplist = "./dataset/dictionary/stopwords_en.txt";
-    String stasticFileName = "./dataset/dictionary/word_stat.txt";
-    String originalDataset = "/home/ibrahimwelsayed/Downloads/883project/Train_rev1.csv";
+    String statFileName = "./dataset/dictionary/word_stat.txt";
+    String originalDataset = "./dataset/training/Train_For_Modeling.csv";
+	String trainSet = "./dataset/training/train/train_all.csv";
+	String validationSet = "./dataset/training/valid/valid_all.csv";
+    String fileOfKeyword = "./dataset/training/all/keywords.txt";
+    String idFile = "./dataset/training/all/ids_all.csv";
+    double validRate = 0.3;
      
     Constructor worker = new Constructor();
  	TreeMap<String, Integer> wordStat = new TreeMap<String, Integer>();
@@ -49,6 +59,7 @@ public class WordCount {
 	System.out.println("Minimum number of occurrences for printing? ");
 	int min = console.nextInt();
 	
+	// filter keywords
 	for (Entry<String, Integer> entry : 
 					wordCounts.entrySet()) {
 		if (entry.getValue() >= min) {
@@ -57,29 +68,29 @@ public class WordCount {
 
 		}
 	}
-     
-	// following block doesn't work after TreeMap has been sorted.
-//     for (String word : wordCounts.keySet()) {
-//         int count = wordCounts.get(word);
-//         if (count >= min)
-////             System.out.println(count + "\t" + word);
-//        	 wordStat.put(word, count);
-//     }
-     
-    // comment by Ying Meng
+
     // sort by values
     System.out.println("\tSorting ...");
     wordStat = sortByValues(wordStat);
     System.out.println("\tDone sorting!");	
-		
+	
     // write wordStat into a text file
-    worker.parse2Txt(wordStat, stasticFileName);
+    worker.parse2Txt(wordStat, statFileName);
+    
     System.out.println("listOfKeyWords: " + listOfKeyWords.size());
     System.out.println(listOfKeyWords.get(listOfKeyWords.size()-1));
-    worker.removeUnwantedRecords(originalDataset, listOfKeyWords);
+//    worker.removeUnwantedRecords(originalDataset, listOfKeyWords);
+    // save ids
+    worker.splitIDsFromDataset(originalDataset, idFile);
+    // split data set into train set and validation set
+    worker.splitDataset(originalDataset, trainSet, validationSet, idFile, validRate);
+    // reorganize train set by keywords
+    worker.organizeDatasetByKey(trainSet, listOfKeyWords);
+    // reorganize validation set by keywords
+    worker.organizeDatasetByKey(validationSet, listOfKeyWords);
  }
  
-// comment by Ying Meng
+// added by Ying Meng
 static <String, Integer extends Comparable<Integer>> TreeMap<String, Integer> sortByValues(final Map<String, Integer> map) {
 	    Comparator<String> valueComparator =  new Comparator<String>() {
 	        public int compare(String key1, String key2) {
