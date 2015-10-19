@@ -1,4 +1,0 @@
-compromit, 1
-computer, 1
-engineer, 1
-software, 1
